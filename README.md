@@ -31,4 +31,4 @@ You have to run the server before the client. You can do it with this set of com
 ./core/client/main.py
 
 #License
-This code is available in GPL v3 licensing
+See [LICENSE](LICENSE) file.
