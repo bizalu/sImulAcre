@@ -27,7 +27,7 @@ sudo pip3 install pydub
 
 #How to run
 You have to run the server before the client. You can do it with this set of command :  
-./core/server/main.py
+./core/server/main.py  
 ./core/client/main.py
 
 #License
