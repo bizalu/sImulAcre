@@ -1,8 +1,0 @@
-![sImulAcre](https://raw.github.com/bizalu/sImulAcre/master/core/client/images/logo.png)
-
-#How to install server dependency
-sudo apt-get install python3 python3-pyqt5 python3-sip
-
-#How to install client dependency
-sudo apt-get install python3 python3-pyqt5 python3-sip python3-pip python3-setuptools mbrola mbrola-fr1 espeak
-sudo pip3 install pydub
