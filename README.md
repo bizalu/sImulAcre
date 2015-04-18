@@ -22,16 +22,20 @@ For the moment, this application can just communicate with existing API or packa
 Installation
 ------------
 
-sImulAcre need dependency to work :  
+sImulAcre need dependency to work : 
+```bash
 sudo apt-get install python3 python3-pyqt5 python3-sip python3-pip python3-setuptools mbrola mbrola-fr1 espeak  
 sudo pip3 install pydub
+```
 
 
 How to run
 ----------
 You have to run the server before the client. You can do it with this set of command :  
+```bash
 ./core/server/main.py  
 ./core/client/main.py
+```
 
 License
 --------
