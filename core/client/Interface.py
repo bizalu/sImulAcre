@@ -7,7 +7,7 @@ from WidgetTalk import *
 from WidgetToolbar import *
 from WidgetOption import *
 from netObject import *
-import sys, pickle
+import sys, pickle, socket
 
 
 
@@ -132,82 +132,48 @@ class Interface(QDialog):
 
     #@brief connect to the server with socket /based on option object/
     def serverConnect(self, address, port):
-        self.socket = QTcpSocket()
-        
-        self.socket.connectToHost(str(address), int(port))
-        
-        if not self.socket.waitForConnected(5000):
-            print("The server " + str(address) + ":" + str(port) + " is down. Please start the server first.")
-            connected = False
-        else:
-            connected = True
-        
-        return connected
+        #création du socket
+        self.mySocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        #envoi d'une requête de connexion au serveur
+        try:
+           self.mySocket.connect((address, port))
+        except socket.error:
+           print("La connexion a échoué.")
+           sys.exit()    
+
+        print("Connexion établie avec le serveur.")      
+        return True
 
     #@brief close the socket
     def serverDisconnect(self):
-        self.socket.disconnectFromHost()
+        print("Connexion interrompue.")
+        self.mySocket.close()
 
     #@Brief get the list of Intelligence module supported by the server
     def getServerConfiguration(self):
-        request = Request("get", "brainList")
+        request = Request("getConf", "brainList")
         brainList = self.serverRequest(request)
         
         return brainList
 
     #@Brief get the list of Intelligence module supported by the server
     def setServerConfiguration(self, option):
-        request = Request("set", [option.brain, option.lang])
+        request = Request("setConf", [option.brain, option.lang])
         self.serverRequest(request)
 
 
     #@brief request the server (exchange of netObject) 
     def serverRequest(self, requestObject):
-        #Serialise the object and transform it on socket
-        print('Serialise Object')
         serialObject = pickle.dumps(requestObject)
-        
-        netObject = QByteArray()
-        askStream = QDataStream(netObject, QIODevice.WriteOnly)
-        askStream.setVersion(QDataStream.Qt_4_2)
+        self.mySocket.send(serialObject)
 
-        askStream.writeUInt16(0)
-        askStream.writeBytes(serialObject)
-        askStream.device().seek(0)
-        askStream.writeUInt16(netObject.size() - SIZEOF_UINT16)
-
-        #Send the socket
-        print('send object')
-        self.socket.write(netObject)
-        if not self.socket.waitForBytesWritten():
-            print("Error : this sentence can't be transmit to the server")    
-
-        #Receive the socket
-        print('receive object')
-        replyStream = QDataStream(self.socket)
-        replyStream.setVersion(QDataStream.Qt_4_2)
-        
-        nextBlockSize = 0
-        if (self.socket.waitForReadyRead(-1) and self.socket.bytesAvailable() >= SIZEOF_UINT16):
-            nextBlockSize = replyStream.readUInt16()
-        else:
-            print("Cannot read client request")
-            return
-            
-        if self.socket.bytesAvailable() < nextBlockSize:
-            if (not self.socket.waitForReadyRead(-1) or self.socket.bytesAvailable() < nextBlockSize):
-                print("Cannot read client data")
-                return
-        
-        #Unserialise the object
-        print('unserialise object')
-        data = replyStream.readBytes()            
-        netObject = pickle.loads(data)
-        
-        if netObject.type == "sentence":
+        replyObject = self.mySocket.recv(1024)            
+        netObject = pickle.loads(replyObject)
+              
+        if netObject.type == "thinkAbout":
             print('server say ' + netObject.answer)
             self.talkWidget.serverSay(netObject.answer)
         
-        if netObject.type == "get":
+        if netObject.type == "getConf":
             print('server send ' + str(netObject.answer))
             return netObject.answer

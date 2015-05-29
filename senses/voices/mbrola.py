@@ -7,7 +7,7 @@ class voice():
     def __init__(self, language):
         self.language = language
         if not os.path.isfile("/usr/share/mbrola/" + language + "/" + language):
-            sys.stderr.write("The language " + self.language + " doesn't exist. Check the directory /usr/share/mbrola.")
+            sys.stderr.write("The language " + self.language + " doesn't exist. Check the directory /usr/share/mbrola")
             sys.exit(1)
 
     def say(self, message):

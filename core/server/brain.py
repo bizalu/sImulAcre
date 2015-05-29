@@ -11,7 +11,6 @@ class Brain():
             sys.stderr.write("The file " + brainFile + " doesn't exist")
             sys.exit(1)
 
-
         #Declaration des objets brain
         object = imp.load_source('brain', brainFile)
         self.brain = object.brain(key)

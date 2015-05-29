@@ -115,6 +115,8 @@ class OptionWidget(QWidget):
             name = info.getModuleName()
             lang = info.getSupportedLanguage()
             voiceList.append([name, filePath, lang])   
+
+
         
         #Set client Configuration into option object
         self.option.setClientOption(earList, voiceList)
@@ -178,11 +180,10 @@ class Option():
         self.brain = "Cleverbot"
         self.brainFile = "../../brain/cleverbot.py"
         self.brainLang = "fr"
-        
 
     def setClientOption(self, earList, voiceList):
         self.earList = earList
-        self.voiceList = voiceList    
+        self.voiceList = voiceList
 
     def setServerOption(self, brainList):
         self.brainList = brainList
@@ -273,6 +274,7 @@ class Option():
                     voicePossible = voicePossible + [name]
         
         return voicePossible
+
 
 
     #@Brief set the current brain module

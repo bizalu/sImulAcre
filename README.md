@@ -24,7 +24,7 @@ Installation
 
 sImulAcre need dependency to work : 
 ```bash
-sudo apt-get install python3 python3-pyqt5 python3-sip python3-pip python3-setuptools mbrola mbrola-fr1 espeak  
+sudo apt-get install python3 python3-pyqt5 python3-sip python3-pip python3-setuptools mbrola mbrola-fr1 espeak libav-tools  
 sudo pip3 install pydub
 ```
 

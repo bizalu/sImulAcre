@@ -144,7 +144,7 @@ class TalkWidget(QWidget):
 
     def questionServer(self, clientText):    
         #Transform what the client say on request object and request the server for answer
-        request = Request("sentence", clientText)
+        request = Request("thinkAbout", clientText)
         self.serverRequestedS.emit(request)  
 
 

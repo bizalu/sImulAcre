@@ -14,7 +14,7 @@ def main(args):
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     
     app = QApplication(args)
-    app.setApplicationName("sImulAcre client v0.1")
+    app.setApplicationName("sImulAcre client v0.2")
     app.setWindowIcon(QIcon("images/logo.png"))
     app.setQuitOnLastWindowClosed(True)
 

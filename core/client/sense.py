@@ -12,19 +12,19 @@ class Sense():
         if not os.path.isfile(earsfile):
             sys.stderr.write("The file " + earsfile + " doesn't exist")
             sys.exit(1)
-
+            
         #Declaration des objets voice et ears
         obj = imp.load_source('voice', voicefile)
         self.voice = obj.voice(voicelang)
 
         obj = imp.load_source('ears', earsfile)
-        self.ears = obj.ears(earslang)      
+        self.ears = obj.ears(earslang)   
+        
 
 
     def listen(self):
         message = self.ears.listen()        
         return message
- 
 
     def speak(self, message):
         self.voice.say(message)

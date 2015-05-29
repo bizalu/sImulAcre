@@ -1,115 +1,134 @@
 # -*- coding: utf8 -*-
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtNetwork import *
-import sys, pickle
+import sys, socket, pickle, threading, os
 from netObject import *
 from brain import *
 
 
-SIZEOF_UINT16 = 2 
+client = {}
 
-class sImulAcreServer(QTcpServer):
+class sImulAcreServer():
 
-    def __init__(self, parent=None):
-        super(sImulAcreServer, self).__init__(parent)
+    def __init__(self):
         self.port = 1412
+        self.address = "127.0.0.1"
     
     def start(self):
         print("=========================================================")
-        print("sImulAcre server v0.1 ")
+        print("sImulAcre server v0.2")
         print("=========================================================")
         
-        if (not self.listen(QHostAddress.Any, self.port)):
-            print("Server can't run")
-            print("Exit")
-            sys.exit(1)
-        else:
-            print("Server is running\n")
-        
-    
-    #@brief Create a thread by connection 
-    def incomingConnection(self, socketDescriptor):
-        print("New connection to sImulAcre server")
-        thread = Thread(socketDescriptor, self)
-        thread.finished.connect(thread.deleteLater)
-        thread.start()      
+        # Initialisation du serveur - Mise en place du socket :
+        mySocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-class Thread(QThread):
+        try:
+            mySocket.bind((self.address, self.port))
 
-    def __init__(self, socketDescriptor, parent):
-        super(Thread, self).__init__(parent)
-        self.socketDescriptor = socketDescriptor
+        except socket.error:
+            print("La liaison du socket à l'adresse choisie a échoué.")
+            sys.exit()
+
+        print("Serveur prêt, en attente de requêtes ...")
+        mySocket.listen(5)        
+
+
+        # Attente et prise en charge des connexions demandées par les clients :
+        while 1:    
+            connexion, adresse = mySocket.accept()
+
+            # Créer un nouvel objet thread pour gérer la connexion :
+            th = ThreadClient(connexion)
+            th.start()
+
+            # Mémoriser la connexion dans le dictionnaire : 
+            it = th.getName()        # identifiant du thread
+            client[it] = connexion
+            print("Client " + str(it) + " connecté, adresse IP " + str(adresse[0]) + ", port " + str(adresse[1]))
+
+
+
+class ThreadClient(threading.Thread):
+
+    def __init__(self, conn):
+        threading.Thread.__init__(self)
+        self.connexion = conn
+
         self.brain = ""
         
         #Default configuration
         self.lang = "French"
         
         self.brainName = "Cleverbot"
-        self.brainFile = "../../brain/cleveverbot.py"
+        self.brainFile = "../../brain/cleverbot.py"
         self.brainLang = "fr"
         
         #Existing possible configuration
         self.brainList = self.getServerConfiguration()
+        self.brain = Brain(self.brainFile, self.brainLang) 
 
 
-    #@brief Get the data information from the received socket and call appropriate methods
-    #Call by the Thread.start() method
+
     def run(self):
-        self.socket = QTcpSocket()
-        self.socket.setSocketDescriptor(self.socketDescriptor)
+        # Dialogue avec le client :
+        nom = self.getName()        # Chaque thread possède un nom
+
+        while 1:
+            msgClient = self.connexion.recv(1024)
+
+            if msgClient.upper() == "FIN" or msgClient == "":
+                break
+            
+            if msgClient :
+                self.readMessage(msgClient)
+
+
+        # Fermeture de la connexion :
+        self.connexion.close()      # couper la connexion côté serveur
+        del client[nom]        # supprimer son entrée dans le dictionnaire
+        print("Client " + nom + " déconnecté.")
+           
         
-        while self.socket.state() == QAbstractSocket.ConnectedState:
-            nextBlockSize = 0
-            stream = QDataStream(self.socket)
-            stream.setVersion(QDataStream.Qt_4_2)
+    def readMessage(self, msg): 
+        netObject = pickle.loads(msg)
             
-            if (self.socket.waitForReadyRead(-1) and self.socket.bytesAvailable() >= SIZEOF_UINT16):
-                nextBlockSize = stream.readUInt16()
-            else:
-                print("Cannot read client request")
-                return
-                
-            if self.socket.bytesAvailable() < nextBlockSize:
-                if (not self.socket.waitForReadyRead(-1) or self.socket.bytesAvailable() < nextBlockSize):
-                    print("Cannot read client data")
-                    return
-            
-            data = stream.readBytes()            
-            netObject = pickle.loads(data)
-            
-            if netObject.type == "sentence":
-                netObject.answer = self.brain.thinkAbout(netObject.request)
-                self.sendReply(netObject)
-            elif netObject.type == "get":
-                netObject.answer = self.brainList
-                self.sendReply(netObject)
-            elif netObject.type == "set":
-                netObject.answer = self.setServerConfiguration(netObject.request)
-                self.sendReply(netObject)
-            else:
-                print("Error : unknow type " + netObject.type)     
+        if netObject.type == "thinkAbout":
+            netObject.answer = self.brain.thinkAbout(netObject.request)
+            self.sendMessage(netObject)
+        elif netObject.type == "getConf":
+            netObject.answer = self.getServerConfiguration()
+            self.sendMessage(netObject)
+        elif netObject.type == "setConf":
+            netObject.answer = self.setServerConfiguration(netObject.request)
+            self.sendMessage(netObject)
+        else:
+            print("Error : unknow type " + netObject.type)     
+
+
+
+    def sendMessage(self, msg):
+        netObject = pickle.dumps(msg)
+        self.connexion.send(netObject)
+
 
 
     #@Brief Get list of possible brain configuration
     def getServerConfiguration(self):
         #brainList [ "name", "file path", "supported language"]
         brainList = []
-        brainDir = QDir("../../brain/")
-        for file in brainDir.entryList(['*.py'], QDir.Files):
-            filePath = brainDir.absolutePath() + "/" + file
-            object = imp.load_source('info', filePath)
-            info = object.info()
-            name = info.getModuleName()
-            lang = info.getSupportedLanguage()
-            brainList.append([name, filePath, lang])
+        for file in os.listdir("../../brain/"):
+            if file.endswith(".py"):
+                filePath = os.path.abspath("../../brain/" + file)
+                object = imp.load_source('info', filePath)
+                info = object.info()
+                name = info.getModuleName()
+                lang = info.getSupportedLanguage()
+                brainList.append([name, filePath, lang])
         
         return brainList   
 
     #@Brief set the current brain module
     def setServerConfiguration(self, brainConf):
         #brainConf [name, lang]
-        self.BrainName = brainConf[0]
+        self.brainName = brainConf[0]
         self.lang = brainConf[1]
         
         for name, file, langs in self.brainList:
@@ -122,24 +141,3 @@ class Thread(QThread):
         self.brain = Brain(self.brainFile, self.brainLang)
         
         return "OK"
-        
-        
-
-    def sendReply(self, replyObject):
-    
-        serialObject = pickle.dumps(replyObject)
-        
-        netObject = QByteArray()
-        stream = QDataStream(netObject, QIODevice.WriteOnly)
-        stream.setVersion(QDataStream.Qt_4_2)
-
-        stream.writeUInt16(0)
-        stream.writeBytes(serialObject)
-        stream.device().seek(0)
-        stream.writeUInt16(netObject.size() - SIZEOF_UINT16)
-
-        self.socket.write(netObject)
-        if not self.socket.waitForBytesWritten():
-            print("Error : this sentence can't be transmit to the client")   
-
-            
